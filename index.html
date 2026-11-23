@@ -709,22 +709,22 @@ var OfxCore = (function () {
       row.qtde++;
       var c = moneyToCents(tx.amount);
       if (c >= 0) row.creditos += c;
-      else row.debitos += c;
+      else row.debitos += -c; /* débitos sempre positivos; líquido = créditos − débitos */
       if (tx.informativo) {
         row.qtdeInfo++;
       } else {
         if (c >= 0) row.creditosMov += c;
-        else row.debitosMov += c;
+        else row.debitosMov += -c;
       }
     }
     function centsToNum(c) { return Math.round(c) / 100; }
     list.forEach(function (r) {
       r.creditos = centsToNum(r.creditos);
       r.debitos = centsToNum(r.debitos);
-      r.liquido = centsToNum(moneyToCents(r.creditos) + moneyToCents(r.debitos));
+      r.liquido = centsToNum(moneyToCents(r.creditos) - moneyToCents(r.debitos));
       r.creditosMov = centsToNum(r.creditosMov);
       r.debitosMov = centsToNum(r.debitosMov);
-      r.liquidoMov = centsToNum(moneyToCents(r.creditosMov) + moneyToCents(r.debitosMov));
+      r.liquidoMov = centsToNum(moneyToCents(r.creditosMov) - moneyToCents(r.debitosMov));
     });
     return list;
   }
@@ -743,6 +743,11 @@ var OfxCore = (function () {
     "Arquivo de origem"
   ];
 
+  function valorAbsoluto(n) {
+    if (n == null || n === "" || !isFinite(n)) return n;
+    return Math.abs(n);
+  }
+
   function rowValues(tx) {
     return [
       tx.bankName || "",
@@ -753,7 +758,7 @@ var OfxCore = (function () {
       tx.documento || "",
       tx.trnType || "",
       tx.dc || "",
-      tx.amount,
+      valorAbsoluto(tx.amount),
       tx.fitid || "",
       tx.fileName || ""
     ];
@@ -860,6 +865,7 @@ var OfxCore = (function () {
     parseAmount: parseAmount,
     formatDateBR: formatDateBR,
     formatMoneyBR: formatMoneyBR,
+    valorAbsoluto: valorAbsoluto,
     toJsDate: toJsDate,
     excelSerial: excelSerial,
     isSaldoInformativo: isSaldoInformativo,
@@ -1071,7 +1077,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = OfxCore;
       "<td class='n'><b>" + tQ + "</b></td>" +
       "<td class='n cred'><b>" + esc(OfxCore.formatMoneyBR(tC / 100, true)) + "</b></td>" +
       "<td class='n deb'><b>" + esc(OfxCore.formatMoneyBR(tD / 100, true)) + "</b></td>" +
-      "<td class='n'><b>" + esc(OfxCore.formatMoneyBR((tC + tD) / 100, true)) + "</b></td></tr>";
+      "<td class='n'><b>" + esc(OfxCore.formatMoneyBR((tC - tD) / 100, true)) + "</b></td></tr>";
     html += "</tbody></table>";
     box.innerHTML = html;
   }
@@ -1115,7 +1121,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = OfxCore;
         "<td>" + esc(r.documento) + "</td>" +
         "<td>" + esc(r.trnType) + "</td>" +
         "<td>" + esc(r.dc) + "</td>" +
-        "<td class='n'>" + esc(OfxCore.formatMoneyBR(r.amount, true)) + "</td>" +
+        "<td class='n'>" + esc(OfxCore.formatMoneyBR(OfxCore.valorAbsoluto(r.amount), true)) + "</td>" +
         "<td class='mono'>" + esc(r.fitid) + "</td>" +
         "<td>" + esc(r.fileName) + "</td>" +
         "</tr>";
